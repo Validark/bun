@@ -1050,8 +1050,11 @@ JSC:
                 vm, JSC::PropertyName(JSC::Identifier::fromString(vm, "resume"_s)),
                 JSC::JSFunction::create(vm, globalObject, 0, "resume"_s, jsReadable_resume, ImplementationVisibility::Public), 0);
             obj->putDirect(
-                vm, JSC::PropertyName(JSC::Identifier::fromString(vm, "emitReadable_"_s)),
-                JSC::JSFunction::create(vm, globalObject, 0, "emitReadable_"_s, jsReadable_emitReadable_, ImplementationVisibility::Public), 0);
+                vm, JSC::PropertyName(JSC::Identifier::fromString(vm, "emitReadable"_s)),
+                JSC::JSFunction::create(vm, globalObject, 0, "emitReadable"_s, jsReadable_emitReadable, ImplementationVisibility::Public), 0);
+            obj->putDirect(
+                vm, JSC::PropertyName(JSC::Identifier::fromString(vm, "onEofChunk"_s)),
+                JSC::JSFunction::create(vm, globalObject, 0, "onEofChunk"_s, jsReadable_onEofChunk, ImplementationVisibility::Public), 0);
             return JSValue::encode(obj);
         }
 
@@ -2300,6 +2303,10 @@ void GlobalObject::addBuiltinGlobals(JSC::VM& vm)
     // putDirect(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().nativeReadableStreamPrototypePrivateName(), jsUndefined(), JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::DontEnum | 0);
 }
 
+// We set it in here since it's a global
+extern "C" void Crypto__randomUUID__put(JSC::JSGlobalObject* globalObject, JSC::EncodedJSValue value);
+extern "C" void Crypto__getRandomValues__put(JSC::JSGlobalObject* globalObject, JSC::EncodedJSValue value);
+
 // This is not a publicly exposed API currently.
 // This is used by the bundler to make Response, Request, FetchEvent,
 // and any other objects available globally.
@@ -2425,7 +2432,23 @@ void GlobalObject::installAPIGlobals(JSClassRef* globals, int count, JSC::VM& vm
                 JSC::JSValue(object), JSC::PropertyAttribute::DontDelete | 0 });
     }
 
-    for (j = 1; j < count - 1; j++) {
+    {
+        j = 1;
+        auto jsClass = globals[j];
+
+        JSC::JSCallbackObject<JSNonFinalObject>* object = JSC::JSCallbackObject<JSNonFinalObject>::create(this, this->callbackObjectStructure(),
+            jsClass, nullptr);
+        if (JSObject* prototype = object->classRef()->prototype(this))
+            object->setPrototypeDirect(vm, prototype);
+
+        Crypto__getRandomValues__put(this, JSValue::encode(object));
+        Crypto__randomUUID__put(this, JSValue::encode(object));
+        extraStaticGlobals.uncheckedAppend(
+            GlobalPropertyInfo { JSC::Identifier::fromString(vm, jsClass->className()),
+                JSC::JSValue(object), JSC::PropertyAttribute::DontDelete | 0 });
+    }
+
+    for (j = 2; j < count - 1; j++) {
         auto jsClass = globals[j];
 
         JSC::JSCallbackObject<JSNonFinalObject>* object = JSC::JSCallbackObject<JSNonFinalObject>::create(this, this->callbackObjectStructure(),
@@ -2501,6 +2524,9 @@ void GlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     thisObject->m_JSFFIFunctionStructure.visit(visitor);
     thisObject->m_JSArrayBufferSinkClassStructure.visit(visitor);
     thisObject->m_JSArrayBufferControllerPrototype.visit(visitor);
+    thisObject->m_JSBufferListClassStructure.visit(visitor);
+    thisObject->m_JSStringDecoderClassStructure.visit(visitor);
+    thisObject->m_JSReadableStateClassStructure.visit(visitor);
     thisObject->m_lazyReadableStreamPrototypeMap.visit(visitor);
     thisObject->m_requireMap.visit(visitor);
     thisObject->m_processEnvObject.visit(visitor);
