@@ -1453,9 +1453,9 @@ fn fail(this: *HTTPClient, err: anyerror) void {
     this.state.stage = .fail;
 
     const callback = this.completion_callback;
-    const result = this.toResult();
+    // const result = this.toResult();
     this.state.reset();
-    callback.run(result);
+    callback.run(HTTPClientResult{});
 }
 
 pub fn done(this: *HTTPClient, comptime is_ssl: bool, ctx: *NewHTTPContext(is_ssl), socket: NewHTTPContext(is_ssl).HTTPSocket) void {
@@ -1487,7 +1487,7 @@ pub fn done(this: *HTTPClient, comptime is_ssl: bool, ctx: *NewHTTPContext(is_ss
 
 pub const HTTPClientResult = struct {
     body: ?*MutableString = null,
-    response: picohttp.Response,
+    response: picohttp.Response = picohttp.Response{},
     metadata_buf: []u8 = &.{},
     href: []const u8 = "",
     fail: anyerror = error.NoError,
