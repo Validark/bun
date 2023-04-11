@@ -1146,8 +1146,7 @@ pub const PathName = struct {
         var dir = path;
         var is_absolute = true;
 
-        var _i = strings.lastIndexOfChar(path, '/');
-        while (_i) |i| {
+        while (strings.lastIndexOfChar(path, '/')) |i| {
             // Stop if we found a non-trailing slash
             if (i + 1 != path.len) {
                 base = path[i + 1 ..];
@@ -1158,13 +1157,10 @@ pub const PathName = struct {
 
             // Ignore trailing slashes
             path = path[0..i];
-
-            _i = strings.lastIndexOfChar(path, '/');
         }
 
         // Strip off the extension
-        var _dot = strings.lastIndexOfChar(base, '.');
-        if (_dot) |dot| {
+        if (strings.lastIndexOfChar(base, '.')) |dot| {
             ext = base[dot..];
             base = base[0..dot];
         }
